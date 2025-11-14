@@ -23,7 +23,6 @@ import (
 	"encoding/base64"
 	"errors"
 	"fmt"
-	"io/ioutil"
 	"os"
 	"path/filepath"
 	"strings"
@@ -284,7 +283,7 @@ func TestAllowUnsafeMalformedObjectDeletionFeature(t *testing.T) {
 			// the secret created in step b will be undecryptable
 			now := time.Now()
 			encryptionConf := filepath.Join(test.configDir, encryptionConfigFileName)
-			body, _ := ioutil.ReadFile(encryptionConf)
+			body, _ := os.ReadFile(encryptionConf)
 			t.Logf("file before write: %s", body)
 			// we replace the existing key with a new key from a different provider
 			if err := os.WriteFile(encryptionConf, []byte(aesCBCConfigYAML), 0o644); err != nil {

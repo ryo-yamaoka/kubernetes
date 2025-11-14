@@ -18,7 +18,7 @@ package git_repo
 
 import (
 	"fmt"
-	"io/ioutil"
+	"os"
 	"path/filepath"
 	"strings"
 
@@ -203,7 +203,7 @@ func (b *gitRepoVolumeMounter) SetUpAt(dir string, mounterArgs volume.MounterArg
 			strings.Join(args, " "), output, err)
 	}
 
-	files, err := ioutil.ReadDir(dir)
+	entries, err := os.ReadDir(dir)
 	if err != nil {
 		return err
 	}
@@ -220,12 +220,16 @@ func (b *gitRepoVolumeMounter) SetUpAt(dir string, mounterArgs volume.MounterArg
 	case len(b.target) != 0 && filepath.Clean(b.target) == ".":
 		// if target dir is '.', use the current dir
 		subdir = filepath.Join(dir)
-	case len(files) == 1:
+	case len(entries) == 1:
 		// if target is not '.', use the generated folder
-		subdir = filepath.Join(dir, files[0].Name())
+		subdir = filepath.Join(dir, entries[0].Name())
 	default:
 		// if target is not '.', but generated many files, it's wrong
-		return fmt.Errorf("unexpected directory contents: %v", files)
+		names := make([]string, len(entries))
+		for i, e := range entries {
+			names[i] = e.Name()
+		}
+		return fmt.Errorf("unexpected directory contents: %v", names)
 	}
 
 	if output, err := b.execCommand("git", []string{"checkout", b.revision}, subdir); err != nil {

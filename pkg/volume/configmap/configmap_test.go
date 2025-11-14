@@ -18,7 +18,6 @@ package configmap
 
 import (
 	"fmt"
-	"io/ioutil"
 	"os"
 	"path/filepath"
 	"reflect"
@@ -292,7 +291,7 @@ func TestMakePayload(t *testing.T) {
 }
 
 func newTestHost(t *testing.T, clientset clientset.Interface) (string, volume.VolumeHost) {
-	tempDir, err := ioutil.TempDir("", "configmap_volume_test.")
+	tempDir, err := os.MkdirTemp("", "configmap_volume_test.")
 	if err != nil {
 		t.Fatalf("can't make a temp rootdir: %v", err)
 	}
@@ -513,24 +512,28 @@ func TestPluginOptional(t *testing.T) {
 	}
 	datadirPath := filepath.Join(volumePath, datadir)
 
-	infos, err := ioutil.ReadDir(volumePath)
+	entries, err := os.ReadDir(volumePath)
 	if err != nil {
 		t.Fatalf("couldn't find volume path, %s", volumePath)
 	}
-	if len(infos) != 0 {
-		for _, fi := range infos {
-			if fi.Name() != "..data" && fi.Name() != datadir {
-				t.Errorf("empty data directory, %s, is not empty. Contains: %s", datadirSymlink, fi.Name())
+	if len(entries) != 0 {
+		for _, entry := range entries {
+			if entry.Name() != "..data" && entry.Name() != datadir {
+				t.Errorf("empty data directory, %s, is not empty. Contains: %s", datadirSymlink, entry.Name())
 			}
 		}
 	}
 
-	infos, err = ioutil.ReadDir(datadirPath)
+	entries, err = os.ReadDir(datadirPath)
 	if err != nil {
 		t.Fatalf("couldn't find volume data path, %s", datadirPath)
 	}
-	if len(infos) != 0 {
-		t.Errorf("empty data directory, %s, is not empty. Contains: %s", datadirSymlink, infos[0].Name())
+	if len(entries) != 0 {
+		info, err := entries[0].Info()
+		if err != nil {
+			t.Fatalf("couldn't get info for entry: %v", err)
+		}
+		t.Errorf("empty data directory, %s, is not empty. Contains: %s", datadirSymlink, info.Name())
 	}
 
 	doTestCleanAndTeardown(plugin, testPodUID, testVolumeName, volumePath, t)
@@ -703,7 +706,7 @@ func doTestConfigMapDataInVolume(volumePath string, configMap v1.ConfigMap, t *t
 		if _, err := os.Stat(configMapDataHostPath); err != nil {
 			t.Fatalf("SetUp() failed, couldn't find configMap data on disk: %v", configMapDataHostPath)
 		} else {
-			actualValue, err := ioutil.ReadFile(configMapDataHostPath)
+			actualValue, err := os.ReadFile(configMapDataHostPath)
 			if err != nil {
 				t.Fatalf("Couldn't read configMap data from: %v", configMapDataHostPath)
 			}

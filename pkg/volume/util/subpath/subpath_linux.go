@@ -21,7 +21,6 @@ package subpath
 
 import (
 	"fmt"
-	"io/ioutil"
 	"os"
 	"path/filepath"
 	"strconv"
@@ -143,7 +142,7 @@ func prepareSubpathTarget(mounter mount.Interface, subpath Subpath) (bool, strin
 		// A file is enough for all possible targets (symlink, device, pipe,
 		// socket, ...), bind-mounting them into a file correctly changes type
 		// of the target file.
-		if err = ioutil.WriteFile(bindPathTarget, []byte{}, 0640); err != nil {
+		if err = os.WriteFile(bindPathTarget, []byte{}, 0640); err != nil {
 			return false, "", fmt.Errorf("error creating file %s: %s", bindPathTarget, err)
 		}
 	}
@@ -238,7 +237,7 @@ func doCleanSubPaths(mounter mount.Interface, podDir string, volumeName string) 
 	subPathDir := filepath.Join(podDir, containerSubPathDirectoryName, volumeName)
 	klog.V(4).Infof("Cleaning up subpath mounts for %s", subPathDir)
 
-	containerDirs, err := ioutil.ReadDir(subPathDir)
+	entries, err := os.ReadDir(subPathDir)
 	if err != nil {
 		if os.IsNotExist(err) {
 			return nil
@@ -246,15 +245,15 @@ func doCleanSubPaths(mounter mount.Interface, podDir string, volumeName string) 
 		return fmt.Errorf("error reading %s: %s", subPathDir, err)
 	}
 
-	for _, containerDir := range containerDirs {
-		if !containerDir.IsDir() {
-			klog.V(4).Infof("Container file is not a directory: %s", containerDir.Name())
+	for _, entry := range entries {
+		if !entry.IsDir() {
+			klog.V(4).Infof("Container file is not a directory: %s", entry.Name())
 			continue
 		}
-		klog.V(4).Infof("Cleaning up subpath mounts for container %s", containerDir.Name())
+		klog.V(4).Infof("Cleaning up subpath mounts for container %s", entry.Name())
 
 		// scan /var/lib/kubelet/pods/<uid>/volume-subpaths/<volume>/<container name>/*
-		fullContainerDirPath := filepath.Join(subPathDir, containerDir.Name())
+		fullContainerDirPath := filepath.Join(subPathDir, entry.Name())
 		// The original traversal method here was ReadDir, which was not so robust to handle some error such as "stale NFS file handle",
 		// so it was replaced with filepath.Walk in a later patch, which can pass through error and handled by the callback WalkFunc.
 		// After go 1.16, WalkDir was introduced, it's more effective than Walk because the callback WalkDirFunc is called before

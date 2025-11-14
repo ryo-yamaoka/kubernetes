@@ -20,7 +20,6 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"io/ioutil"
 	"os"
 	"path/filepath"
 	"regexp"
@@ -927,7 +926,7 @@ func isSessionBusy(host volume.VolumeHost, portal, iqn string) bool {
 func getVolCount(dir, portal, iqn string) (int, error) {
 	// For FileSystem volumes, the topmost dirs are named after the ifaces, e.g., iface-default or iface-127.0.0.1:3260:pv0.
 	// For Block volumes, the default topmost dir is volumeDevices.
-	contents, err := ioutil.ReadDir(dir)
+	entries, err := os.ReadDir(dir)
 	if err != nil {
 		if os.IsNotExist(err) {
 			return 0, nil
@@ -938,18 +937,18 @@ func getVolCount(dir, portal, iqn string) (int, error) {
 	// Inside each iface dir, we look for volume dirs prefixed by the given
 	// portal + iqn, e.g., 127.0.0.1:3260-iqn.2003-01.io.k8s:e2e.volume-1-lun-2
 	var counter int
-	for _, c := range contents {
-		if !c.IsDir() || c.Name() == kubeletconfig.DefaultKubeletVolumeDevicesDirName {
+	for _, entry := range entries {
+		if !entry.IsDir() || entry.Name() == kubeletconfig.DefaultKubeletVolumeDevicesDirName {
 			continue
 		}
 
-		mounts, err := ioutil.ReadDir(filepath.Join(dir, c.Name()))
+		mountEntries, err := os.ReadDir(filepath.Join(dir, entry.Name()))
 		if err != nil {
 			return 0, err
 		}
 
-		for _, m := range mounts {
-			volumeMount := m.Name()
+		for _, mountEntry := range mountEntries {
+			volumeMount := mountEntry.Name()
 			prefix := portal + "-" + iqn
 			if strings.HasPrefix(volumeMount, prefix) {
 				counter++
